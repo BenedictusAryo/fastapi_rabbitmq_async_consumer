@@ -21,8 +21,11 @@ class PikaClient:
             )
         )
         self.channel = self.connection.channel()
-        self.publish_queue = self.channel.queue_declare(queue=self.publisher_queue_name)
+        self.channel.exchange_declare(exchange=self.publisher_queue_name, exchange_type='fanout')
+        # self.publish_queue = self.channel.queue_declare(queue=self.publisher_queue_name)
+        self.publish_queue = self.channel.queue_declare(queue='', exclusive=True)
         self.callback_queue = self.publish_queue.method.queue
+        self.channel.queue_bind(exchange=self.publisher_queue_name, queue=self.callback_queue)
         self.response = None
         self.process_callable = process_callable
         print('PikaClient connection initialized')
@@ -37,7 +40,9 @@ class PikaClient:
             loop=loop
         )
         channel = await connection.channel()
-        queue = await channel.declare_queue(os.getenv('CONSUMER_QUEUE_NAME', 'fastapi_app'))
+        exchange = await channel.declare_exchange(self.publisher_queue_name, 'fanout')
+        queue = await channel.declare_queue('')
+        await queue.bind(exchange)
         await queue.consume(self.process_incomming_message, no_ack=False)
         print('Established pika async listener')
         return connection
@@ -54,8 +59,8 @@ class PikaClient:
     def send_message(self, message:dict) -> None:
         """Send message to the queue"""
         self.channel.basic_publish(
-            exchange='',
-            routing_key=self.publisher_queue_name,
+            exchange=self.publisher_queue_name,
+            routing_key='',
             properties=pika.BasicProperties(
                 reply_to=self.callback_queue,
                 correlation_id=str(uuid.uuid4())
@@ -63,3 +68,4 @@ class PikaClient:
             body=json.dumps(message)
         )
         print(f'PikaClient send_message message: {message}')
+        
