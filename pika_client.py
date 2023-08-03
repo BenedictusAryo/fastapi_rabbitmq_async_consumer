@@ -29,7 +29,6 @@ class PikaClient:
         
     async def consume(self, loop:asyncio.AbstractEventLoop) -> None:
         """Setup message listener with the current running loop"""
-        print('PikaClient consume')
         connection = await connect_robust(
             host=os.getenv('RABBITMQ_HOST', 'localhost'),
             port=os.getenv('RABBITMQ_PORT', 5672),
@@ -45,7 +44,6 @@ class PikaClient:
     
     async def process_incomming_message(self, message:IncomingMessage) -> None:
         """Process incoming message from the queue"""
-        print('PikaClient process_incomming_message')
         await message.ack()
         body = message.body
         print(f'PikaClient process_incomming_message body: {body}')
@@ -55,7 +53,6 @@ class PikaClient:
             
     def send_message(self, message:dict) -> None:
         """Send message to the queue"""
-        print('PikaClient send_message')
         self.channel.basic_publish(
             exchange='',
             routing_key=self.publisher_queue_name,
